@@ -29,6 +29,7 @@ dev = [
 
 [project.scripts]
 stock-learn = "stock_learn_agent.cli:main"
+mimo-chat = "stock_learn_agent.openai_compat_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -36,4 +37,3 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-

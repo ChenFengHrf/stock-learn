@@ -37,7 +37,7 @@ SUBAGENTS = [
     {
         "name": "market-researcher",
         "description": "Research current market news, company events, macro changes, and price data.",
-        "prompt": "你负责实时市场研究。必须用 Tavily 或行情工具支撑事实，不要做最终投资结论。",
+        "system_prompt": "你负责实时市场研究。必须用 Tavily 或行情工具支撑事实，不要做最终投资结论。",
         "tools": [
             tavily_market_search,
             resolve_stock_symbol,
@@ -49,13 +49,13 @@ SUBAGENTS = [
     {
         "name": "trading-system-analyst",
         "description": "Map a question to the private trading-system course framework.",
-        "prompt": "你负责从课程知识库中找交易体系依据，提炼框架、条件、风险点和复盘问题。",
+        "system_prompt": "你负责从课程知识库中找交易体系依据，提炼框架、条件、风险点和复盘问题。",
         "tools": [search_trading_system, recall_investor_memory, think_tool],
     },
     {
         "name": "risk-auditor",
         "description": "Audit position sizing, invalidation, drawdown, concentration, and uncertainty.",
-        "prompt": "你负责风险复核。重点看仓位、止损/失效、情绪追涨、相关性和最坏情况。",
+        "system_prompt": "你负责风险复核。重点看仓位、止损/失效、情绪追涨、相关性和最坏情况。",
         "tools": [
             search_trading_system,
             get_stock_price,

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
-import yfinance as yf
 from langchain_core.tools import tool
-from tavily import TavilyClient
 
 from .config import load_settings
 from .knowledge import format_search_results, search_knowledge
+from .market_data import (
+    analyze_recent_price,
+    format_quote,
+    get_recent_quote,
+    resolve_stock_symbol as resolve_symbol,
+)
 from .memory import format_memories, save_memory, search_memories
 
 
@@ -27,6 +30,8 @@ def tavily_market_search(query: str, topic: str = "finance", max_results: int = 
     if not settings.tavily_api_key:
         return "TAVILY_API_KEY 未配置。请在 .env 中补充后再查询实时资讯。"
 
+    from tavily import TavilyClient
+
     client = TavilyClient(api_key=settings.tavily_api_key)
     response = client.search(
         query=query,
@@ -39,52 +44,27 @@ def tavily_market_search(query: str, topic: str = "finance", max_results: int = 
 
 
 @tool
+def resolve_stock_symbol(symbol: str) -> str:
+    """Resolve Chinese stock names, common typos, 6-digit A-share codes, and Yahoo symbols."""
+    return format_quote(resolve_symbol(symbol))
+
+
+@tool
 def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> str:
-    """Get recent stock, ETF, or index price data using the free yfinance API."""
-    ticker = yf.Ticker(symbol)
-    history = ticker.history(period=period, interval=interval, auto_adjust=False)
-    if history.empty:
-        return f"没有查到 {symbol} 的行情数据。可以尝试换成 Yahoo Finance 标准代码。"
-
-    latest = history.tail(1).iloc[0]
-    info: dict[str, Any] = {}
+    """Get recent stock, ETF, or index price data. A-shares use Eastmoney; others use yfinance."""
     try:
-        fast_info = ticker.fast_info
-        info = {
-            "currency": getattr(fast_info, "currency", None),
-            "exchange": getattr(fast_info, "exchange", None),
-            "last_price": getattr(fast_info, "last_price", None),
-            "market_cap": getattr(fast_info, "market_cap", None),
-        }
-    except Exception:
-        info = {}
+        return format_quote(get_recent_quote(symbol, period=period, interval=interval))
+    except Exception as exc:
+        return f"行情查询失败：{exc}"
 
-    payload = {
-        "symbol": symbol,
-        "period": period,
-        "interval": interval,
-        "latest_bar": {
-            "date": str(history.tail(1).index[0]),
-            "open": float(latest["Open"]),
-            "high": float(latest["High"]),
-            "low": float(latest["Low"]),
-            "close": float(latest["Close"]),
-            "volume": int(latest["Volume"]),
-        },
-        "fast_info": info,
-        "recent_bars": [
-            {
-                "date": str(index),
-                "open": float(row["Open"]),
-                "high": float(row["High"]),
-                "low": float(row["Low"]),
-                "close": float(row["Close"]),
-                "volume": int(row["Volume"]),
-            }
-            for index, row in history.tail(10).iterrows()
-        ],
-    }
-    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+@tool
+def analyze_stock_price(symbol: str) -> str:
+    """Get recent price data and produce a structured, conservative risk analysis."""
+    try:
+        return format_quote(analyze_recent_price(symbol))
+    except Exception as exc:
+        return f"行情分析失败：{exc}"
 
 
 @tool
@@ -124,9 +104,10 @@ def think_tool(reflection: str) -> str:
 TOOLS = [
     search_trading_system,
     tavily_market_search,
+    resolve_stock_symbol,
     get_stock_price,
+    analyze_stock_price,
     recall_investor_memory,
     save_investor_memory,
     think_tool,
 ]
-

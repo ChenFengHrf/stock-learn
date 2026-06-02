@@ -9,7 +9,7 @@ from rich.console import Console
 from .agent import ask
 from .config import load_settings
 from .knowledge import format_search_results, ingest_course, search_knowledge
-from .tools import get_stock_price
+from .tools import analyze_stock_price, get_stock_price, resolve_stock_symbol
 
 
 console = Console()
@@ -31,6 +31,12 @@ def _build_parser() -> argparse.ArgumentParser:
     quote.add_argument("symbol")
     quote.add_argument("--period", default="5d")
     quote.add_argument("--interval", default="1d")
+
+    analyze = subparsers.add_parser("analyze-price", help="Analyze recent stock price risk.")
+    analyze.add_argument("symbol")
+
+    resolve = subparsers.add_parser("resolve", help="Resolve a stock name/code to a quote symbol.")
+    resolve.add_argument("symbol")
 
     ask_parser = subparsers.add_parser("ask", help="Ask the DeepAgents assistant.")
     ask_parser.add_argument("question")
@@ -63,11 +69,28 @@ def main() -> None:
         console.print(result)
         return
 
+    if args.command == "analyze-price":
+        console.print(analyze_stock_price.invoke({"symbol": args.symbol}))
+        return
+
+    if args.command == "resolve":
+        console.print(resolve_stock_symbol.invoke({"symbol": args.symbol}))
+        return
+
     if args.command == "ask":
-        console.print(ask(args.question, thread_id=args.thread_id))
+        try:
+            console.print(ask(args.question, thread_id=args.thread_id))
+        except Exception as exc:
+            message = str(exc)
+            if "Missing credentials" in message or "OPENAI_API_KEY" in message:
+                console.print(
+                    "模型凭证未配置。请在 .env 中设置 OPENAI_API_KEY，"
+                    "或把 STOCK_LEARN_MODEL 改成你已配置的模型提供方。"
+                )
+                return
+            raise
         return
 
 
 if __name__ == "__main__":
     main()
-

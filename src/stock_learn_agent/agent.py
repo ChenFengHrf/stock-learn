@@ -8,10 +8,12 @@ from langgraph.store.memory import InMemoryStore
 from .config import Settings, load_settings
 from .tools import (
     TOOLS,
+    analyze_stock_price,
     get_stock_price,
     recall_investor_memory,
     save_investor_memory,
     search_trading_system,
+    resolve_stock_symbol,
     tavily_market_search,
     think_tool,
 )
@@ -24,7 +26,7 @@ SYSTEM_PROMPT = """
 1. 先调用 recall_investor_memory，了解用户长期偏好、风险约束、关注标的和过往复盘结论。
 2. 涉及交易体系、仓位、买卖点、风控、复盘时，优先调用 search_trading_system，不要凭空总结课程。
 3. 涉及当下新闻、政策、财报、宏观和行业变化时，调用 tavily_market_search，并给出来源 URL。
-4. 涉及标的当前或近期价格时，调用 get_stock_price。
+4. 涉及标的当前或近期价格时，先允许中文名/错别字/6位 A 股代码，用 resolve_stock_symbol、get_stock_price 或 analyze_stock_price 确认代码和行情；A 股价格以东方财富/腾讯返回为准，其他市场再用 yfinance。
 5. 结论里必须区分：事实、课程框架下的推理、不确定性、需要用户自己确认的交易计划。
 6. 不直接给“保证赚钱”或无条件买卖指令；所有建议都要包含失效条件、仓位风险和回撤风险。
 7. 如果用户表达了稳定偏好或明确约束，可以调用 save_investor_memory 保存。
@@ -36,7 +38,13 @@ SUBAGENTS = [
         "name": "market-researcher",
         "description": "Research current market news, company events, macro changes, and price data.",
         "prompt": "你负责实时市场研究。必须用 Tavily 或行情工具支撑事实，不要做最终投资结论。",
-        "tools": [tavily_market_search, get_stock_price, think_tool],
+        "tools": [
+            tavily_market_search,
+            resolve_stock_symbol,
+            get_stock_price,
+            analyze_stock_price,
+            think_tool,
+        ],
     },
     {
         "name": "trading-system-analyst",
@@ -48,7 +56,13 @@ SUBAGENTS = [
         "name": "risk-auditor",
         "description": "Audit position sizing, invalidation, drawdown, concentration, and uncertainty.",
         "prompt": "你负责风险复核。重点看仓位、止损/失效、情绪追涨、相关性和最坏情况。",
-        "tools": [search_trading_system, get_stock_price, recall_investor_memory, think_tool],
+        "tools": [
+            search_trading_system,
+            get_stock_price,
+            analyze_stock_price,
+            recall_investor_memory,
+            think_tool,
+        ],
     },
 ]
 

@@ -106,10 +106,11 @@ def iter_course_articles(course_dir: Path) -> Iterable[Article]:
 
     for idx, item in enumerate(articles, start=1):
         raw_path = item.get("savedPath") or item.get("path") or ""
-        article_path = course_dir / raw_path
-        if article_path.is_dir():
-            article_path = article_path / "index.html"
-        if not article_path.exists():
+        if raw_path:
+            article_path = course_dir / raw_path
+            if article_path.is_dir():
+                article_path = article_path / "index.html"
+        else:
             article_dir = item.get("articleDir") or f"article-{idx:03d}"
             article_path = course_dir / article_dir / "index.html"
         if not article_path.exists():
@@ -213,6 +214,11 @@ def _fts_query(query: str) -> str:
     return " OR ".join(tokens[:8]) or query
 
 
+def _query_tokens(query: str) -> list[str]:
+    tokens = re.findall(r"[\w\u4e00-\u9fff]+", query)
+    return [token for token in tokens if token.strip()]
+
+
 def search_knowledge(query: str, db_path: Path, limit: int = 5) -> list[dict[str, str]]:
     if not db_path.exists():
         return [
@@ -244,16 +250,24 @@ def search_knowledge(query: str, db_path: Path, limit: int = 5) -> list[dict[str
             rows = []
 
         if not rows:
-            like = f"%{query}%"
+            tokens = _query_tokens(query)
+            if not tokens:
+                return []
+            where = " or ".join(["title like ? or text like ?" for _ in tokens])
+            params: list[str | int] = []
+            for token in tokens:
+                like = f"%{token}%"
+                params.extend([like, like])
+            params.append(limit)
             rows = list(
                 conn.execute(
-                    """
+                    f"""
                     select title, text, source_url
                     from chunks
-                    where title like ? or text like ?
+                    where {where}
                     limit ?
                     """,
-                    (like, like, limit),
+                    params,
                 )
             )
 

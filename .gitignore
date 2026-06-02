@@ -1,0 +1,16 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local-only course archives, paid article text/images, and generated indexes.
+data/private/
+data/knowledge/建立交易体系*/
+data/**/*.sqlite
+data/**/*.sqlite-*
+data/**/*.db
+outputs/
+

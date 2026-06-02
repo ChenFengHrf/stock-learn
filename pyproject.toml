@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stock-learn"
+version = "0.1.0"
+description = "LangGraph / DeepAgents stock research assistant fed by a private trading-system course archive."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "beautifulsoup4>=4.12.0",
+  "deepagents>=0.2.0",
+  "langchain>=1.0.0",
+  "langchain-core>=1.0.0",
+  "langchain-openai>=1.0.0",
+  "langgraph>=1.0.0",
+  "python-dotenv>=1.0.1",
+  "rich>=13.7.0",
+  "tavily-python>=0.7.0",
+  "yfinance>=0.2.50",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.8.0",
+]
+
+[project.scripts]
+stock-learn = "stock_learn_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
